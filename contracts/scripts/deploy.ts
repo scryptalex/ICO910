@@ -5,23 +5,24 @@ async function main() {
 
   const GameToken = await ethers.getContractFactory("GameToken");
   const gameToken = await upgrades.deployProxy(GameToken, [], { initializer: "initialize" });
-  await gameToken.deployed();
-  console.log("GameToken deployed:", gameToken.address);
+  await gameToken.waitForDeployment();
+  console.log("GameToken deployed:", await gameToken.getAddress());
 
   const ICO = await ethers.getContractFactory("GameTokenICO");
-  const ico = await ICO.deploy(gameToken.address, USDT_ADDRESS);
-  await ico.deployed();
-  console.log("ICO deployed:", ico.address);
+  const gtkAddr = await gameToken.getAddress();
+  const ico = await ICO.deploy(gtkAddr, USDT_ADDRESS);
+  await ico.waitForDeployment();
+  console.log("ICO deployed:", await ico.getAddress());
 
   const Tournament = await ethers.getContractFactory("TournamentManager");
-  const tournament = await Tournament.deploy(gameToken.address);
-  await tournament.deployed();
-  console.log("Tournament deployed:", tournament.address);
+  const tournament = await Tournament.deploy(gtkAddr);
+  await tournament.waitForDeployment();
+  console.log("Tournament deployed:", await tournament.getAddress());
 
-  await (await gameToken.setBurnerAddress(tournament.address, "tournament")).wait();
+  await (await gameToken.setBurnerAddress(await tournament.getAddress(), "tournament")).wait();
 
-  const icoAllocation = ethers.utils.parseUnits("840000000", 18);
-  await (await gameToken.transfer(ico.address, icoAllocation)).wait();
+  const icoAllocation = ethers.parseUnits("840000000", 18);
+  await (await gameToken.transfer(await ico.getAddress(), icoAllocation)).wait();
 
   console.log("Setup completed.");
 }
@@ -30,4 +31,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-

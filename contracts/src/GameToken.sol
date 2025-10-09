@@ -29,21 +29,18 @@ contract GameToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,
     function burnFromTournament(uint256 amount) external whenNotPaused {
         require(_msgSender() == tournamentBurner, "Only tournament burner");
         _burn(_msgSender(), amount);
-        totalBurned += amount;
         emit TokensBurned(_msgSender(), amount, "Tournament Revenue");
     }
 
     function burnFromPlatform(uint256 amount) external whenNotPaused {
         require(_msgSender() == platformBurner, "Only platform burner");
         _burn(_msgSender(), amount);
-        totalBurned += amount;
         emit TokensBurned(_msgSender(), amount, "Platform Fees");
     }
 
     function burnFromGovernance(uint256 amount) external whenNotPaused {
         require(_msgSender() == governanceBurner, "Only governance burner");
         _burn(_msgSender(), amount);
-        totalBurned += amount;
         emit TokensBurned(_msgSender(), amount, "Governance Action");
     }
 
@@ -71,5 +68,9 @@ contract GameToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable,
     function getTotalBurned() external view returns (uint256) {
         return totalBurned;
     }
-}
 
+    function _burn(address account, uint256 amount) internal override(ERC20Upgradeable) {
+        super._burn(account, amount);
+        totalBurned += amount;
+    }
+}
