@@ -1,13 +1,12 @@
 "use client"
 import { useMemo, useState } from 'react'
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useReadContract, useWriteContract } from 'wagmi'
 import { ICO_ABI, ICO_ADDRESS, ERC20_ABI, USDT_ADDRESS } from '@/lib/contracts'
 import { parseUnits, formatUnits } from 'viem'
 
 export default function BuyWidget() {
   const { address, isConnected } = useAccount()
   const [usdt, setUsdt] = useState<string>('')
-  const [hash, setHash] = useState<`0x${string}` | undefined>()
   const { data: phase } = useReadContract({ address: ICO_ADDRESS, abi: ICO_ABI, functionName: 'currentPhase' })
   const { data: cfg } = useReadContract({ address: ICO_ADDRESS, abi: ICO_ABI, functionName: 'phaseConfigs', args: [Number(phase ?? 0)] }) as { data: any }
 
@@ -29,7 +28,6 @@ export default function BuyWidget() {
   }, [price, bonus, usdt])
 
   const { writeContract, isPending } = useWriteContract()
-  const { isLoading: isMining, isSuccess } = useWaitForTransactionReceipt({ hash })
 
   const onBuy = async () => {
     if (!isConnected || !price) return
@@ -39,20 +37,19 @@ export default function BuyWidget() {
     if (maxPurchase && usdtAmt > maxPurchase) return
 
     // Approve USDT then buy
-    const approveHash = await writeContract({
+    await writeContract({
       address: USDT_ADDRESS,
       abi: ERC20_ABI,
       functionName: 'approve',
       args: [ICO_ADDRESS, usdtAmt]
     })
     // We rely on wallet UIs to wait for approval; then call buy
-    const buyHash = await writeContract({
+    await writeContract({
       address: ICO_ADDRESS,
       abi: ICO_ABI,
       functionName: 'buyTokens',
       args: [usdtAmt]
     })
-    setHash(buyHash as `0x${string}`)
   }
 
   return (
@@ -68,13 +65,11 @@ export default function BuyWidget() {
       <div className="text-sm text-zinc-400">GTK Received (est): {tokensOut}</div>
       <button
         onClick={onBuy}
-        disabled={!isConnected || isPending || isMining || !usdt}
+        disabled={!isConnected || isPending || !usdt}
         className="bg-primary px-4 py-2 rounded disabled:opacity-50"
       >
-        {isPending || isMining ? 'Processing...' : 'Purchase Tokens'}
+        {isPending ? 'Processing...' : 'Purchase Tokens'}
       </button>
-      {isSuccess && <div className="text-green-400 text-sm">Success! Tx: {hash?.slice(0,10)}...</div>}
     </div>
   )
 }
-
