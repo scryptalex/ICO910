@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Page() {
   return (
     <main className="space-y-10">
@@ -15,7 +17,7 @@ export default function Page() {
         </div>
         <div className="p-6 rounded-lg bg-zinc-900">
           <h2 className="font-semibold mb-2">Buy GTK</h2>
-          <a className="inline-block bg-primary text-white px-4 py-2 rounded" href="/buy">Join Presale</a>
+          <Link className="inline-block bg-primary text-white px-4 py-2 rounded" href="/buy">Join Presale</Link>
         </div>
       </section>
 
@@ -42,4 +44,3 @@ export default function Page() {
     </main>
   )
 }
-
