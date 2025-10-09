@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.*
+!web/.env.example
+
+# Next.js
+.next/
+out/
+
+# Hardhat
+contracts/cache/
+contracts/artifacts/
+coverage/
+
+# Logs
+logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
