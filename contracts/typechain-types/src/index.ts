@@ -5,3 +5,4 @@ import type * as tournamentManagerSol from "./TournamentManager.sol";
 export type { tournamentManagerSol };
 export type { GameToken } from "./GameToken";
 export type { GameTokenICO } from "./GameTokenICO";
+export type { MockUSDT } from "./MockUSDT";

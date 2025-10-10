@@ -4,3 +4,4 @@
 export * as tournamentManagerSol from "./TournamentManager.sol";
 export { GameToken__factory } from "./GameToken__factory";
 export { GameTokenICO__factory } from "./GameTokenICO__factory";
+export { MockUSDT__factory } from "./MockUSDT__factory";

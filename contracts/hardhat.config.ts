@@ -24,6 +24,10 @@ const config: HardhatUserConfig = {
     mumbai: {
       url: process.env.MUMBAI_RPC_URL || "",
       accounts: PRIVATE_KEY !== "0x" ? [PRIVATE_KEY] : []
+    },
+    amoy: {
+      url: process.env.AMOY_RPC_URL || "",
+      accounts: PRIVATE_KEY !== "0x" ? [PRIVATE_KEY] : []
     }
   },
   paths: {
@@ -35,4 +39,3 @@ const config: HardhatUserConfig = {
 };
 
 export default config;
-

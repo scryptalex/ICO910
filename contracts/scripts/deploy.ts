@@ -1,16 +1,26 @@
 import { ethers, upgrades } from "hardhat";
 
 async function main() {
-  const USDT_ADDRESS = process.env.USDT_ADDRESS || "0x0000000000000000000000000000000000000000";
+  let usdtAddress = process.env.USDT_ADDRESS || "";
 
   const GameToken = await ethers.getContractFactory("GameToken");
   const gameToken = await upgrades.deployProxy(GameToken, [], { initializer: "initialize" });
   await gameToken.waitForDeployment();
   console.log("GameToken deployed:", await gameToken.getAddress());
 
+  // If no USDT provided (or set to 'mock'), deploy a MockUSDT with large supply (testnet)
+  if (!usdtAddress || usdtAddress.toLowerCase() === "mock") {
+    const MockUSDT = await ethers.getContractFactory("MockUSDT");
+    const initialSupply = ethers.parseUnits("1000000000", 6); // 1,000,000,000 USDT (6 decimals)
+    const mock = await MockUSDT.deploy(initialSupply);
+    await mock.waitForDeployment();
+    usdtAddress = await mock.getAddress();
+    console.log("MockUSDT deployed:", usdtAddress);
+  }
+
   const ICO = await ethers.getContractFactory("GameTokenICO");
   const gtkAddr = await gameToken.getAddress();
-  const ico = await ICO.deploy(gtkAddr, USDT_ADDRESS);
+  const ico = await ICO.deploy(gtkAddr, usdtAddress);
   await ico.waitForDeployment();
   console.log("ICO deployed:", await ico.getAddress());
 
