@@ -1,0 +1,76 @@
+name: Deploy Contracts (Amoy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      usdt_address:
+        description: "USDT address or 'mock'"
+        required: false
+        default: "mock"
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/deploy-amoy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      AMOY_RPC_URL: ${{ secrets.AMOY_RPC_URL }}
+      USDT_ADDRESS: ${{ inputs.usdt_address || 'mock' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install deps
+        working-directory: contracts
+        run: npm ci
+
+      - name: Create .env
+        working-directory: contracts
+        run: |
+          echo "PRIVATE_KEY=${PRIVATE_KEY}" > .env
+          echo "AMOY_RPC_URL=${AMOY_RPC_URL}" >> .env
+          echo "USDT_ADDRESS=${USDT_ADDRESS}" >> .env
+          cat .env | sed 's/=.\+/=<hidden>/'
+
+      - name: Compile
+        working-directory: contracts
+        run: npm run build
+
+      - name: Deploy to Amoy
+        id: deploy
+        working-directory: contracts
+        run: |
+          set -e
+          npx hardhat run scripts/deploy.ts --network amoy | tee deploy-log.txt
+          echo "---"
+          echo "Parsed addresses:" 
+          GTK=$(grep -E "^GameToken deployed:" deploy-log.txt | sed 's/.*: //')
+          ICO=$(grep -E "^ICO deployed:" deploy-log.txt | sed 's/.*: //')
+          TMT=$(grep -E "^Tournament deployed:" deploy-log.txt | sed 's/.*: //')
+          USDT=$(grep -E "^MockUSDT deployed:" deploy-log.txt | sed 's/.*: //')
+          echo "gtk=$GTK" >> $GITHUB_OUTPUT
+          echo "ico=$ICO" >> $GITHUB_OUTPUT
+          echo "tournament=$TMT" >> $GITHUB_OUTPUT
+          if [ -n "$USDT" ]; then echo "usdt=$USDT" >> $GITHUB_OUTPUT; fi
+          jq -n --arg gtk "$GTK" --arg ico "$ICO" --arg tournament "$TMT" --arg usdt "${USDT}" '{gtk:$gtk, ico:$ico, tournament:$tournament, usdt:$usdt}' > deployed-amoy.json
+
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployed-amoy
+          path: contracts/deployed-amoy.json
+
