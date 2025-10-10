@@ -27,29 +27,54 @@ export default function BuyWidget() {
     }
   }, [price, bonus, usdt])
 
+  const { data: allowance } = useReadContract(
+    address && USDT_ADDRESS && ICO_ADDRESS
+      ? { address: USDT_ADDRESS, abi: ERC20_ABI, functionName: 'allowance', args: [address, ICO_ADDRESS] }
+      : undefined as any
+  ) as { data: bigint | undefined }
+
+  const [approvalSent, setApprovalSent] = useState(false)
+  const [purchaseSent, setPurchaseSent] = useState(false)
+  const [error, setError] = useState<string | undefined>()
+
   const { writeContract, isPending } = useWriteContract()
 
   const onBuy = async () => {
-    if (!isConnected || !price) return
-    const usdtAmt = parseUnits(usdt || '0', 6)
-    // optional front validation against min/max
-    if (minPurchase && usdtAmt < minPurchase) return
-    if (maxPurchase && usdtAmt > maxPurchase) return
+    try {
+      setError(undefined)
+      if (!isConnected || !price) return
+      const usdtAmt = parseUnits(usdt || '0', 6)
+      if (usdtAmt === 0n) return
+      if (minPurchase && usdtAmt < minPurchase) {
+        setError('Amount is below minimum purchase for this phase')
+        return
+      }
+      if (maxPurchase && usdtAmt > maxPurchase) {
+        setError('Amount exceeds maximum purchase for this phase')
+        return
+      }
 
-    // Approve USDT then buy
-    await writeContract({
-      address: USDT_ADDRESS,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [ICO_ADDRESS, usdtAmt]
-    })
-    // We rely on wallet UIs to wait for approval; then call buy
-    await writeContract({
-      address: ICO_ADDRESS,
-      abi: ICO_ABI,
-      functionName: 'buyTokens',
-      args: [usdtAmt]
-    })
+      const needApproval = (allowance ?? 0n) < usdtAmt
+      if (needApproval) {
+        await writeContract({
+          address: USDT_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [ICO_ADDRESS, usdtAmt]
+        })
+        setApprovalSent(true)
+      }
+
+      await writeContract({
+        address: ICO_ADDRESS,
+        abi: ICO_ABI,
+        functionName: 'buyTokens',
+        args: [usdtAmt]
+      })
+      setPurchaseSent(true)
+    } catch (e: any) {
+      setError(e?.shortMessage || e?.message || 'Transaction failed')
+    }
   }
 
   return (
@@ -63,12 +88,19 @@ export default function BuyWidget() {
         onChange={(e) => setUsdt(e.target.value)}
       />
       <div className="text-sm text-zinc-400">GTK Received (est): {tokensOut}</div>
+      {error && <div className="text-sm text-red-400">{error}</div>}
+      {approvalSent && (
+        <div className="text-xs text-zinc-400">Approval submitted. Waiting for confirmation in your wallet.</div>
+      )}
+      {purchaseSent && (
+        <div className="text-xs text-zinc-400">Purchase submitted. Check your wallet for status.</div>
+      )}
       <button
         onClick={onBuy}
         disabled={!isConnected || isPending || !usdt}
         className="bg-primary px-4 py-2 rounded disabled:opacity-50"
       >
-        {isPending ? 'Processing...' : 'Purchase Tokens'}
+        {isPending ? 'Processing...' : 'Approve & Purchase'}
       </button>
     </div>
   )
